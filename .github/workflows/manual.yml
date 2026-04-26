@@ -16,26 +16,19 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Tools
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp
+          pip install yt-dlp requests
 
-      # --- TASK 1: LISTING QUALITY ---
-      - name: List Qualities and Callback
-        if: github.event.action == 'listing-trigger'
-        run: |
-          URL="${{ github.event.client_payload.url }}"
-          CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
-          
-          echo "Listing formats for $URL"
-          # Get format list in JSON format
-          FORMATS=$(yt-dlp -j "$URL" | jq '.formats | map({format_id, resolution, ext, filesize, note, vcodec, acodec})')
-          
-          # Send back to your webhook
-          curl -X POST -H "Content-Type: application/json" \
-            -d "{\"job_id\": \"${{ github.event.client_payload.job_id }}\", \"formats\": $FORMATS}" \
-            $CALLBACK_URL
+      # --- TASK 1: LISTING ---
+      - name: Run Listing Script
+        if: github.event.action == 'listing'
+        env:
+          YT_URL: ${{ github.event.client_payload.url }}
+          CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+        run: python listing_callback.py
 
       # --- TASK 2: DOWNLOADING SPECIFIC ITAG ---
       - name: Download Selected Quality
