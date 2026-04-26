@@ -26,7 +26,7 @@ jobs:
         if: github.event.action == 'listing-trigger'
         env:
           YT_URL: ${{ github.event.client_payload.url }}
-          CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
+          CALLBACK_URL: ${{ secrets.CALLBACK_URL }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
         run: python listing_callback.py
 
