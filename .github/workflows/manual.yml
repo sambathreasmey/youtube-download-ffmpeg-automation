@@ -23,7 +23,7 @@ jobs:
 
       # --- TASK 1: LISTING ---
       - name: Run Listing Script
-        if: github.event.action == 'listing'
+        if: github.event.action == 'listing-trigger'
         env:
           YT_URL: ${{ github.event.client_payload.url }}
           CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
