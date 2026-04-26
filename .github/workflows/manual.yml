@@ -23,7 +23,7 @@ jobs:
 
       # --- TASK 1: LISTING QUALITY ---
       - name: List Qualities and Callback
-        if: github.event.action == 'listing'
+        if: github.event.action == 'listing-trigger'
         run: |
           URL="${{ github.event.client_payload.url }}"
           CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
@@ -39,7 +39,7 @@ jobs:
 
       # --- TASK 2: DOWNLOADING SPECIFIC ITAG ---
       - name: Download Selected Quality
-        if: github.event.action == 'download'
+        if: github.event.action == 'download-trigger'
         run: |
           URL="${{ github.event.client_payload.url }}"
           ITAG="${{ github.event.client_payload.itag }}"
@@ -54,7 +54,7 @@ jobs:
             "$URL" -o "final_video.mp4"
 
       - name: Upload Downloaded Video
-        if: github.event.action == 'download'
+        if: github.event.action == 'download-trigger'
         uses: actions/upload-artifact@v4
         with:
           name: video-${{ github.event.client_payload.job_id }}
