@@ -19,7 +19,12 @@ def main():
 
     try:
         # 1. Run yt-dlp to get JSON metadata
-        cmd = ["yt-dlp", "-j", url]
+        cmd = [
+            "yt-dlp", 
+            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "-j", 
+            url
+        ]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         video_data = json.loads(result.stdout)
 
