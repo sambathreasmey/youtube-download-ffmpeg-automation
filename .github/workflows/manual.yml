@@ -1,0 +1,62 @@
+name: YouTube High Quality Downloader
+
+on:
+  # Allows triggering via GitHub API
+  repository_dispatch:
+    types: [download-youtube]
+  
+  # Allows triggering manually from the "Actions" tab
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'YouTube URL to download'
+        required: true
+        type: string
+
+jobs:
+  download-process:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yt-dlp
+          # FFmpeg is pre-installed on ubuntu-latest, but we ensure it's accessible
+          ffmpeg -version
+
+      - name: Download and Merge Video
+        run: |
+          # 1. Determine the URL from the trigger source
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            URL="${{ github.event.client_payload.url }}"
+          else
+            URL="${{ github.event.inputs.url }}"
+          fi
+
+          echo "Target URL: $URL"
+
+          # 2. Run yt-dlp with High Quality settings
+          # -f "bv+ba/b": Best Video + Best Audio
+          # --merge-output-format mp4: Uses FFmpeg to put streams in MP4 container
+          # --remux-video mp4: Ensures final file is compatible
+          yt-dlp -f "bv+ba/b" \
+            --merge-output-format mp4 \
+            --remux-video mp4 \
+            --no-mtime \
+            "$URL" -o "high_quality_video.mp4"
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-video-output
+          path: high_quality_video.mp4
+          retention-days: 1
