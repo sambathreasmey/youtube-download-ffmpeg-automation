@@ -19,7 +19,8 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp requests
+          # Force the latest version of yt-dlp
+          pip install -U yt-dlp requests
 
       # --- TASK 1: LISTING ---
       - name: Run Listing Script
