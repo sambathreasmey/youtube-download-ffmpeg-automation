@@ -1,62 +1,61 @@
-name: YouTube High Quality Downloader
+name: YouTube Remote Worker
 
 on:
-  # Allows triggering via GitHub API
   repository_dispatch:
-    types: [download-youtube]
-  
-  # Allows triggering manually from the "Actions" tab
-  workflow_dispatch:
-    inputs:
-      url:
-        description: 'YouTube URL to download'
-        required: true
-        type: string
+    types: [listing, download]
 
 jobs:
-  download-process:
+  process-request:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Tools
         run: |
           python -m pip install --upgrade pip
           pip install yt-dlp
-          # FFmpeg is pre-installed on ubuntu-latest, but we ensure it's accessible
-          ffmpeg -version
 
-      - name: Download and Merge Video
+      # --- TASK 1: LISTING QUALITY ---
+      - name: List Qualities and Callback
+        if: github.event.action == 'listing'
         run: |
-          # 1. Determine the URL from the trigger source
-          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
-            URL="${{ github.event.client_payload.url }}"
-          else
-            URL="${{ github.event.inputs.url }}"
-          fi
+          URL="${{ github.event.client_payload.url }}"
+          CALLBACK_URL="${{ github.event.client_payload.callback_url }}"
+          
+          echo "Listing formats for $URL"
+          # Get format list in JSON format
+          FORMATS=$(yt-dlp -j "$URL" | jq '.formats | map({format_id, resolution, ext, filesize, note, vcodec, acodec})')
+          
+          # Send back to your webhook
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"job_id\": \"${{ github.event.client_payload.job_id }}\", \"formats\": $FORMATS}" \
+            $CALLBACK_URL
 
-          echo "Target URL: $URL"
-
-          # 2. Run yt-dlp with High Quality settings
-          # -f "bv+ba/b": Best Video + Best Audio
-          # --merge-output-format mp4: Uses FFmpeg to put streams in MP4 container
-          # --remux-video mp4: Ensures final file is compatible
-          yt-dlp -f "bv+ba/b" \
+      # --- TASK 2: DOWNLOADING SPECIFIC ITAG ---
+      - name: Download Selected Quality
+        if: github.event.action == 'download'
+        run: |
+          URL="${{ github.event.client_payload.url }}"
+          ITAG="${{ github.event.client_payload.itag }}"
+          
+          echo "Downloading itag $ITAG from $URL"
+          
+          # Use bv+ba logic but prioritize the specific itag requested
+          # If the itag is video-only, it automatically merges with best audio
+          yt-dlp -f "$ITAG+bestaudio/best" \
             --merge-output-format mp4 \
             --remux-video mp4 \
-            --no-mtime \
-            "$URL" -o "high_quality_video.mp4"
+            "$URL" -o "final_video.mp4"
 
-      - name: Upload Result
+      - name: Upload Downloaded Video
+        if: github.event.action == 'download'
         uses: actions/upload-artifact@v4
         with:
-          name: youtube-video-output
-          path: high_quality_video.mp4
-          retention-days: 1
+          name: video-${{ github.event.client_payload.job_id }}
+          path: final_video.mp4
