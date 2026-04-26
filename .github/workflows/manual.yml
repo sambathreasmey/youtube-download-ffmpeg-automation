@@ -2,7 +2,7 @@ name: YouTube Remote Worker
 
 on:
   repository_dispatch:
-    types: [listing, download]
+    types: [listing-trigger, download-trigger]
 
 jobs:
   process-request:
